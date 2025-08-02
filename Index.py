@@ -4,6 +4,7 @@ import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 from datetime import datetime
 import threading
+import threading
 
 
 class FileOrganizerApp:
@@ -45,25 +46,19 @@ class FileOrganizerApp:
         type_frame = ttk.Frame(self.main_frame)
         type_frame.grid(row=3, column=1, sticky=tk.W, pady=5)
 
-        ttk.Radiobutton(type_frame, text="按文件类型", variable=self.organize_type, value="type").pack(side=tk.LEFT,
-                                                                                                       padx=10)
-        ttk.Radiobutton(type_frame, text="按时间", variable=self.organize_type, value="time").pack(side=tk.LEFT,
-                                                                                                   padx=10)
+        ttk.Radiobutton(type_frame, text="按文件类型", variable=self.organize_type,
+                        value="type", command=self.update_time_options_visibility).pack(side=tk.LEFT, padx=10)
+        ttk.Radiobutton(type_frame, text="按修改时间", variable=self.organize_type,
+                        value="time", command=self.update_time_options_visibility).pack(side=tk.LEFT, padx=10)
 
-        # 时间选项
-        time_frame = ttk.LabelFrame(self.main_frame, text="时间选项")
-        time_frame.grid(row=4, column=0, columnspan=3, sticky=tk.W + tk.E, pady=5, padx=5)
+        # 时间选项（只保留修改时间相关）
+        self.time_frame = ttk.LabelFrame(self.main_frame, text="时间选项")
+        self.time_frame.grid(row=4, column=0, columnspan=3, sticky=tk.W + tk.E, pady=5, padx=5)
 
-        self.time_basis = tk.StringVar(value="modified")
-        ttk.Radiobutton(time_frame, text="修改时间", variable=self.time_basis, value="modified").pack(side=tk.LEFT,
-                                                                                                      padx=10, pady=5)
-        ttk.Radiobutton(time_frame, text="创建时间", variable=self.time_basis, value="created").pack(side=tk.LEFT,
-                                                                                                     padx=10, pady=5)
-
-        ttk.Label(time_frame, text="日期格式:").pack(side=tk.LEFT, padx=(20, 5))
+        ttk.Label(self.time_frame, text="日期格式:").pack(side=tk.LEFT, padx=(20, 5))
         self.date_format = tk.StringVar(value="YYYY-MM-DD")
         date_formats = ["YYYY-MM-DD", "DD-MM-YYYY", "YYYY-MM", "MM-YYYY"]
-        date_format_combo = ttk.Combobox(time_frame, textvariable=self.date_format, values=date_formats,
+        date_format_combo = ttk.Combobox(self.time_frame, textvariable=self.date_format, values=date_formats,
                                          state="readonly", width=12)
         date_format_combo.pack(side=tk.LEFT, padx=5)
 
@@ -85,6 +80,9 @@ class FileOrganizerApp:
         for i in range(8):
             self.main_frame.rowconfigure(i, weight=1)
 
+        # 初始隐藏时间选项
+        self.update_time_options_visibility()
+
     def select_source_dir(self):
         dir_path = filedialog.askdirectory()
         if dir_path:
@@ -97,6 +95,13 @@ class FileOrganizerApp:
         dir_path = filedialog.askdirectory()
         if dir_path:
             self.dest_dir_var.set(dir_path)
+
+    def update_time_options_visibility(self):
+        """根据选择的整理方式显示或隐藏时间选项"""
+        if self.organize_type.get() == "time":
+            self.time_frame.grid()  # 显示时间选项
+        else:
+            self.time_frame.grid_remove()  # 隐藏时间选项
 
     def start_organizing(self):
         source_dir = self.source_dir_var.get()
@@ -146,17 +151,8 @@ class FileOrganizerApp:
                     else:
                         folder_name = f"{file_ext}*文件"
                 else:
-                    # 按时间整理
-                    if self.time_basis.get() == "modified":
-                        timestamp = os.path.getmtime(file_path)
-                    else:
-                        # 在Windows上使用创建时间，在Unix上使用birthtime
-                        try:
-                            timestamp = os.path.getctime(file_path)
-                        except AttributeError:
-                            # 对于不支持getctime的系统，使用修改时间
-                            timestamp = os.path.getmtime(file_path)
-
+                    # 按修改时间整理
+                    timestamp = os.path.getmtime(file_path)
                     dt = datetime.fromtimestamp(timestamp)
                     date_format = self.date_format.get()
 
